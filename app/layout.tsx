@@ -1,8 +1,14 @@
 import { Geist, Geist_Mono } from "next/font/google"
+import type { Metadata } from "next"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = {
+  title: "Token Burner",
+  description: "Burn your Copilot tokens with AI chat",
+}
 
 const fontSans = Geist({
   subsets: ["latin"],
