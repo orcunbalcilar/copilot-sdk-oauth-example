@@ -1,22 +1,32 @@
-// NOTE: We need a temporary solution to the copilot sdk bug (https://github.com/github/copilot-sdk/issues/707)
-// We will remove this in the future after updating the copilot sdk.
-// Currently @github/copilot-sdk is pinned to 0.1.30 in package.json.
 import { auth } from "@/auth"
+import { pendingApprovals } from "@/lib/approval-store"
+import { pipeCopilotToUIStream } from "@/lib/copilot-stream"
+import type {
+  PermissionRequest,
+  PermissionRequestResult,
+} from "@github/copilot-sdk"
 import { CopilotClient } from "@github/copilot-sdk"
+import {
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  UIMessage,
+} from "ai"
 
 // Per-user clients keyed by access token
-const clients = new Map<string, CopilotClient>()
+const clients = new Map<string, { client: CopilotClient; createdAt: number }>()
 
 function getClientForUser(accessToken: string) {
-  let client = clients.get(accessToken)
-  if (!client) {
-    console.log("Creating new CopilotClient for access token:", accessToken)
-    client = new CopilotClient({
-      githubToken: accessToken,
-      useLoggedInUser: false,
-    })
-    clients.set(accessToken, client)
+  const existing = clients.get(accessToken)
+  // Reuse client for up to 5 minutes
+  if (existing && Date.now() - existing.createdAt < 5 * 60 * 1000) {
+    return existing.client
   }
+  const client = new CopilotClient({
+    telemetry: {
+      otlpEndpoint: "http://localhost:4318",
+    },
+  })
+  clients.set(accessToken, { client, createdAt: Date.now() })
   return client
 }
 
@@ -26,82 +36,61 @@ export async function POST(req: Request) {
     return Response.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const { message, sessionId } = await req.json()
+  const { messages }: { messages: UIMessage[] } = await req.json()
 
-  if (!message || typeof message !== "string") {
+  // Extract the last user message text
+  const lastUserMessage = messages.findLast((m) => m.role === "user")
+  const messageText =
+    lastUserMessage?.parts
+      .filter((p): p is { type: "text"; text: string } => p.type === "text")
+      .map((p) => p.text)
+      .join("\n") ?? ""
+
+  if (!messageText) {
     return Response.json({ error: "Message is required" }, { status: 400 })
   }
 
   const copilot = getClientForUser(authSession.accessToken)
 
-  const onPermissionRequest = async () => ({ kind: "approved" as const })
-
-  // Create or resume session
-  let copilotSession
-  try {
-    if (sessionId) {
-      copilotSession = await copilot.resumeSession(sessionId, {
-        onPermissionRequest,
-      })
-    } else {
-      copilotSession = await copilot.createSession({
-        model: "claude-sonnet-4.5",
-        streaming: true,
-        onPermissionRequest,
-      })
+  const onPermissionRequest = async (
+    request: PermissionRequest
+  ): Promise<PermissionRequestResult> => {
+    const toolCallId = request.toolCallId
+    if (!toolCallId) {
+      return { kind: "approved" }
     }
-  } catch {
-    copilotSession = await copilot.createSession({
-      model: "claude-sonnet-4.5",
-      streaming: true,
-      onPermissionRequest,
+
+    // Wait for user approval via the /api/chat/approve endpoint
+    const result = await new Promise<PermissionRequestResult>((resolve) => {
+      pendingApprovals.set(toolCallId, { resolve, request })
+
+      // Auto-approve after 30s timeout to prevent indefinite blocking
+      setTimeout(() => {
+        if (pendingApprovals.has(toolCallId)) {
+          pendingApprovals.delete(toolCallId)
+          resolve({ kind: "approved" })
+        }
+      }, 30_000)
     })
+
+    return result
   }
 
-  const currentSessionId = copilotSession.sessionId
-
-  // Stream the response using SSE via ReadableStream
-  const encoder = new TextEncoder()
-  const stream = new ReadableStream({
-    async start(controller) {
-      const enqueue = (data: Record<string, unknown>) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
-      }
-
-      // Send session ID immediately
-      enqueue({ type: "session", sessionId: currentSessionId })
-
-      copilotSession.on("assistant.message_delta", (event) => {
-        enqueue({ type: "delta", content: event.data.deltaContent })
-      })
-
-      copilotSession.on("assistant.usage", (event) => {
-        enqueue({
-          type: "usage",
-          inputTokens: event.data.inputTokens ?? 0,
-          outputTokens: event.data.outputTokens ?? 0,
-        })
-      })
-
-      copilotSession.on("session.idle", () => {
-        enqueue({ type: "done" })
-        controller.close()
-      })
-
-      copilotSession.on("session.error", (event) => {
-        enqueue({ type: "error", message: event.data.message })
-        controller.close()
-      })
-
-      await copilotSession.sendAndWait({ prompt: message })
+  const copilotSession = await copilot.createSession({
+    streaming: true,
+    onPermissionRequest,
+    model: "openai/gpt-4o-mini",
+    provider: {
+      type: "openai",
+      baseUrl: "https://openrouter.ai/api/v1",
+      apiKey: process.env.OPENROUTER_API_KEY!,
     },
   })
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
+  const stream = createUIMessageStream({
+    execute: ({ writer }) =>
+      pipeCopilotToUIStream(copilotSession, writer, messageText),
   })
+
+  return createUIMessageStreamResponse({ stream })
 }
