@@ -21,10 +21,9 @@ export function ContextUsage({
   className,
   ...props
 }: ContextUsageProps) {
-  const pct = Math.min(
-    (usage.currentTokens / usage.tokenLimit) * 100,
-    100,
-  );
+  const pct = usage.tokenLimit > 0
+    ? Math.min((usage.currentTokens / usage.tokenLimit) * 100, 100)
+    : 0;
 
   return (
     <div
