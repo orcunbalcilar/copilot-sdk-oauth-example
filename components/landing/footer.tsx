@@ -1,5 +1,5 @@
-import { Sparkles } from "lucide-react";
-import Link from "next/link";
+import { Heart, Sparkles } from "lucide-react"
+import Link from "next/link"
 
 export function Footer() {
   return (
@@ -9,8 +9,10 @@ export function Footer() {
           <Sparkles className="size-5 text-primary" />
           <span className="font-semibold">RestFlowAI</span>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Built with RestFlow, Next.js, and GitHub Copilot SDK
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          Built with
+          <Heart className="size-3.5 animate-pulse fill-rose-500 text-rose-500" />
+          using RestFlow, Next.js &amp; GitHub Copilot SDK
         </p>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <Link
@@ -19,7 +21,7 @@ export function Footer() {
             rel="noopener noreferrer"
             className="hover:text-foreground"
           >
-            GitHub
+            GitHub<span className="sr-only"> (opens in new tab)</span>
           </Link>
           <Link href="/chat" className="hover:text-foreground">
             Get Started
@@ -27,5 +29,5 @@ export function Footer() {
         </div>
       </div>
     </footer>
-  );
+  )
 }

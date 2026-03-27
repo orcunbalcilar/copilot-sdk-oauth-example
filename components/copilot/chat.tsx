@@ -85,8 +85,9 @@ export function CopilotChat(props: CopilotChatProps) {
   const [input, setInput] = useState("")
 
   const handleSubmit = () => {
-    if (!input.trim()) return
-    sendMessage(input)
+    const trimmed = input.trim()
+    if (!trimmed) return
+    sendMessage(trimmed)
     setInput("")
   }
 

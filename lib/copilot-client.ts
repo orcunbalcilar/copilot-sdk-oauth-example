@@ -1,97 +1,87 @@
-import type {
-  PermissionRequestResult,
-} from "@github/copilot-sdk";
-import { CopilotClient } from "@github/copilot-sdk";
-import type { ProviderConfig } from "./chat-settings";
+/**
+ * Copilot SDK Client Manager
+ *
+ * Manages CopilotClient lifecycle with per-user GitHub token auth.
+ * Supports Copilot subscription and BYOK (Vercel AI Gateway) providers.
+ */
 
-// Persist clients across HMR in development
-const globalStore = globalThis as unknown as {
-  __copilotClients?: Map<string, { client: CopilotClient; createdAt: number }>;
-};
-const clients = (globalStore.__copilotClients ??= new Map());
-const CLIENT_TTL_MS = 5 * 60 * 1000;
+import type { CopilotClient, ModelInfo } from "@github/copilot-sdk"
+import { CopilotClient as SDK } from "@github/copilot-sdk"
+import crypto from "node:crypto"
 
-export function getClient(accessToken: string): CopilotClient {
-  const existing = clients.get(accessToken);
-  if (existing && Date.now() - existing.createdAt < CLIENT_TTL_MS) {
-    return existing.client;
-  }
-  const client = new CopilotClient({
-    telemetry: { otlpEndpoint: "http://localhost:4318" },
-    githubToken: accessToken,
-  });
-  clients.set(accessToken, { client, createdAt: Date.now() });
-  return client;
+const globalForClients = globalThis as unknown as {
+  __copilotDefaultClient?: CopilotClient | null
+  __copilotUserClients?: Map<string, CopilotClient>
 }
 
-// Auto-approve all tool requests (user preference)
-export function autoApproveHandler(): Promise<PermissionRequestResult> {
-  return Promise.resolve({ kind: "approved" });
+let defaultClient: CopilotClient | null =
+  globalForClients.__copilotDefaultClient ?? null
+const userClients = (globalForClients.__copilotUserClients ??= new Map())
+
+export function tokenKey(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex").slice(0, 16)
 }
 
-export function resolveProviderConfig(
-  providerId?: string,
-): ProviderConfig | undefined {
-  if (!providerId || providerId === "copilot") return undefined;
-
-  if (providerId === "openrouter") {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) return undefined;
-    return {
-      id: "openrouter",
-      name: "OpenRouter",
-      models: {
-        "google/gemini-2.0-flash-001": "Gemini 2.0 Flash",
-        "anthropic/claude-sonnet-4": "Claude Sonnet 4",
-        "openai/gpt-4.1": "GPT-4.1",
-        "openai/gpt-oss-20b:free": "GPT-OSS 20B (Free)",
+/** Models available through the Vercel AI Gateway (BYOK). */
+export function getByokModels(): ModelInfo[] {
+  if (!process.env.VERCEL_AI_GATEWAY_API_KEY) return []
+  return [
+    {
+      id: "openai/gpt-oss-20b",
+      name: "GPT-OSS 20B",
+      capabilities: {
+        supports: { vision: false, reasoningEffort: false },
+        limits: { max_context_window_tokens: 128000 },
       },
-      defaultModel: "openai/gpt-oss-20b:free",
-      supportsReasoning: false,
-    };
-  }
-
-  if (providerId === "vercel") {
-    const apiKey = process.env.VERCEL_AI_GATEWAY_API_KEY;
-    if (!apiKey) return undefined;
-    return {
-      id: "vercel",
-      name: "Vercel AI Gateway",
-      models: { "openai/gpt-oss-20b": "GPT-OSS 20B" },
-      defaultModel: "openai/gpt-oss-20b",
-      supportsReasoning: false,
-    };
-  }
-
-  return undefined;
+    },
+  ]
 }
 
-export function getSessionProvider(providerId?: string) {
-  if (!providerId || providerId === "copilot") return undefined;
-
-  if (providerId === "openrouter") {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) return undefined;
-    return {
-      type: "openai" as const,
-      baseUrl: "https://openrouter.ai/api/v1",
-      apiKey,
-    };
-  }
-
-  if (providerId === "vercel") {
-    const apiKey = process.env.VERCEL_AI_GATEWAY_API_KEY;
-    if (!apiKey) return undefined;
-    return {
-      type: "openai" as const,
-      baseUrl: "https://ai-gateway.vercel.sh/v1",
-      apiKey,
-    };
-  }
-
-  return undefined;
+/** All models for onListModels (Copilot defaults + BYOK). */
+function buildAllModels(): ModelInfo[] {
+  const defaultId =
+    process.env.LLM_MODEL_ID || "gpt-5-mini"
+  const copilotDefaults: ModelInfo[] = [
+    {
+      id: defaultId,
+      name: defaultId,
+      capabilities: {
+        supports: { vision: false, reasoningEffort: true },
+        limits: { max_context_window_tokens: 128000 },
+      },
+    },
+  ]
+  return [...copilotDefaults, ...getByokModels()]
 }
 
-export function getDefaultModelId(): string {
-  return process.env.LLM_MODEL_ID || "gpt-oss-20b";
+export function getClient(githubToken?: string): CopilotClient {
+  const logLevel =
+    process.env.NODE_ENV === "development"
+      ? ("info" as const)
+      : ("warning" as const)
+
+  const telemetry = { otlpEndpoint: "http://localhost:4318" }
+  const allModels = buildAllModels()
+  const onListModels = () => allModels
+
+  if (githubToken) {
+    const key = tokenKey(githubToken)
+    if (!userClients.has(key)) {
+      userClients.set(
+        key,
+        new SDK({
+          logLevel,
+          telemetry,
+          githubToken,
+          useLoggedInUser: false,
+          onListModels,
+        }),
+      )
+    }
+    return userClients.get(key)!
+  }
+
+  defaultClient ??= new SDK({ logLevel, telemetry, onListModels })
+  globalForClients.__copilotDefaultClient = defaultClient
+  return defaultClient
 }
