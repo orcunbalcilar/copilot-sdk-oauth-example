@@ -36,9 +36,10 @@ const navItems = [
 ];
 
 function getInitials(name?: string | null): string {
-  if (!name) return "U";
-  return name
+  if (!name?.trim()) return "U";
+  return name.trim()
     .split(" ")
+    .filter((part) => part.length > 0)
     .map((part) => part[0])
     .join("")
     .toUpperCase()
