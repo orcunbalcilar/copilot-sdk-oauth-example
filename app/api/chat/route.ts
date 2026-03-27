@@ -1,96 +1,130 @@
 import { auth } from "@/auth"
-import { pendingApprovals } from "@/lib/approval-store"
-import { pipeCopilotToUIStream } from "@/lib/copilot-stream"
-import type {
-  PermissionRequest,
-  PermissionRequestResult,
-} from "@github/copilot-sdk"
-import { CopilotClient } from "@github/copilot-sdk"
 import {
-  createUIMessageStream,
-  createUIMessageStreamResponse,
-  UIMessage,
-} from "ai"
+  getClient,
+  autoApproveHandler,
+  getSessionProvider,
+  getDefaultModelId,
+  resolveProviderConfig,
+} from "@/lib/copilot-client"
 
-// Per-user clients keyed by access token
-const clients = new Map<string, { client: CopilotClient; createdAt: number }>()
+// ============================================================================
+// GET — Provider & model listing
+// ============================================================================
 
-function getClientForUser(accessToken: string) {
-  const existing = clients.get(accessToken)
-  // Reuse client for up to 5 minutes
-  if (existing && Date.now() - existing.createdAt < 5 * 60 * 1000) {
-    return existing.client
-  }
-  const client = new CopilotClient({
-    telemetry: {
-      otlpEndpoint: "http://localhost:4318",
-    },
-  })
-  clients.set(accessToken, { client, createdAt: Date.now() })
-  return client
-}
-
-export async function POST(req: Request) {
-  const authSession = await auth()
-  if (!authSession?.accessToken) {
+export async function GET() {
+  const session = await auth()
+  if (!session?.accessToken) {
     return Response.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const { messages }: { messages: UIMessage[] } = await req.json()
+  const providers = [
+    {
+      id: "copilot",
+      name: "GitHub Copilot",
+      models: { [getDefaultModelId()]: getDefaultModelId() },
+      defaultModel: getDefaultModelId(),
+      supportsReasoning: true,
+    },
+  ]
 
-  // Extract the last user message text
-  const lastUserMessage = messages.findLast((m) => m.role === "user")
-  const messageText =
-    lastUserMessage?.parts
-      .filter((p): p is { type: "text"; text: string } => p.type === "text")
-      .map((p) => p.text)
-      .join("\n") ?? ""
+  // Add configured BYOK providers
+  const openrouter = resolveProviderConfig("openrouter")
+  if (openrouter) providers.push(openrouter)
 
-  if (!messageText) {
+  const vercel = resolveProviderConfig("vercel")
+  if (vercel) providers.push(vercel)
+
+  return Response.json({ providers, defaultProvider: "copilot" })
+}
+
+// ============================================================================
+// POST — Streaming chat
+// ============================================================================
+
+interface ChatRequest {
+  message: string
+  providerId?: string
+  modelId?: string
+}
+
+export async function POST(req: Request) {
+  const session = await auth()
+  if (!session?.accessToken) {
+    return Response.json({ error: "Not authenticated" }, { status: 401 })
+  }
+
+  let body: ChatRequest
+  try {
+    body = await req.json()
+  } catch {
+    return Response.json({ error: "Invalid JSON" }, { status: 400 })
+  }
+
+  if (!body.message?.trim()) {
     return Response.json({ error: "Message is required" }, { status: 400 })
   }
 
-  const copilot = getClientForUser(authSession.accessToken)
+  const copilot = getClient(session.accessToken)
+  const provider = getSessionProvider(body.providerId)
+  const modelId = body.modelId || getDefaultModelId()
 
-  const onPermissionRequest = async (
-    request: PermissionRequest
-  ): Promise<PermissionRequestResult> => {
-    const toolCallId = request.toolCallId
-    if (!toolCallId) {
-      return { kind: "approved" }
-    }
-
-    // Wait for user approval via the /api/chat/approve endpoint
-    const result = await new Promise<PermissionRequestResult>((resolve) => {
-      pendingApprovals.set(toolCallId, { resolve, request })
-
-      // Auto-approve after 30s timeout to prevent indefinite blocking
-      setTimeout(() => {
-        if (pendingApprovals.has(toolCallId)) {
-          pendingApprovals.delete(toolCallId)
-          resolve({ kind: "approved" })
-        }
-      }, 30_000)
+  let copilotSession
+  try {
+    copilotSession = await copilot.createSession({
+      streaming: true,
+      onPermissionRequest: autoApproveHandler,
+      model: provider ? modelId : getDefaultModelId(),
+      ...(provider && { provider }),
     })
-
-    return result
+  } catch {
+    return Response.json({ error: "Failed to create session" }, { status: 502 })
   }
 
-  const copilotSession = await copilot.createSession({
-    streaming: true,
-    onPermissionRequest,
-    model: "openai/gpt-4o-mini",
-    provider: {
-      type: "openai",
-      baseUrl: "https://openrouter.ai/api/v1",
-      apiKey: process.env.OPENROUTER_API_KEY!,
+  return streamSession(copilotSession, body.message)
+}
+
+function streamSession(
+  copilotSession: Awaited<ReturnType<ReturnType<typeof getClient>["createSession"]>>,
+  message: string,
+) {
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    start(controller) {
+      copilotSession.on((event) => {
+        try {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(event)}\n\n`),
+          )
+        } catch {
+          // Stream may already be closed
+        }
+
+        if (event.type === "session.idle" || event.type === "session.error") {
+          try {
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"))
+            controller.close()
+          } catch {
+            // Already closed
+          }
+        }
+      })
+
+      copilotSession.sendAndWait({ prompt: message }).catch(() => {
+        try {
+          controller.close()
+        } catch {
+          // Already closed
+        }
+      })
     },
   })
 
-  const stream = createUIMessageStream({
-    execute: ({ writer }) =>
-      pipeCopilotToUIStream(copilotSession, writer, messageText),
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
   })
-
-  return createUIMessageStreamResponse({ stream })
 }

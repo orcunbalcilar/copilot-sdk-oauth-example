@@ -7,8 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Token Burner",
-  description: "Burn your Copilot tokens with AI chat",
+  title: "RestFlowAI",
+  description: "API Testing Reimagined with AI Automation",
 }
 
 const fontSans = Geist({
