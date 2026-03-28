@@ -23,7 +23,7 @@ Agents are auto-selected based on intent:
 name: "Test Name"
 steps:
   - http:
-      method: get|post|put|delete
+      method: get|post|put|delete|patch|head|options
       url: "full URL"
       headers: [{name: "", value: ""}]
       body: "JSON string for POST/PUT"

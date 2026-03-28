@@ -6,17 +6,14 @@
  */
 
 import { auth } from "@/auth"
-import { getClient, getByokModels } from "@/lib/copilot-client"
-import {
-  getSessionProvider,
-  getDefaultModelId,
-} from "@/lib/copilot/providers"
-import { restflowTools } from "@/lib/copilot/tools"
-import { AGENT_INSTRUCTIONS } from "@/lib/copilot/instructions"
+import { pendingApprovals } from "@/lib/approval-store"
+import { getByokModels, getClient } from "@/lib/copilot-client"
 import { customAgents } from "@/lib/copilot/agents"
 import { getMcpServerUrl } from "@/lib/copilot/config"
 import { READ_ONLY_MCP_TOOLS } from "@/lib/copilot/constants"
-import { pendingApprovals } from "@/lib/approval-store"
+import { AGENT_INSTRUCTIONS } from "@/lib/copilot/instructions"
+import { getDefaultModelId, getSessionProvider } from "@/lib/copilot/providers"
+import { restflowTools } from "@/lib/copilot/tools"
 import type { PermissionRequest, SessionConfig } from "@github/copilot-sdk"
 
 // ============================================================================
@@ -83,7 +80,7 @@ export async function POST(req: Request) {
         const unsubscribe = copilotSession.on((event) => {
           try {
             controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify(event)}\n\n`),
+              encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
             )
             if (
               event.type === "session.idle" ||
@@ -106,7 +103,7 @@ export async function POST(req: Request) {
             },
           }
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(errorEvent)}\n\n`),
+            encoder.encode(`data: ${JSON.stringify(errorEvent)}\n\n`)
           )
           unsubscribe()
           controller.close()
