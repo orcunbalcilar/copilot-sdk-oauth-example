@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { formatRelativeTime } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/time-utils";
 import {
   listProjects,
   createProject,
@@ -51,8 +51,10 @@ import {
   type Project,
   type CreateProjectRequest,
 } from "@/lib/services";
+import { useProject } from "@/lib/project-context";
 
 export default function ProjectsPage() {
+  const { refreshProjects } = useProject();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +94,7 @@ export default function ProjectsPage() {
       setProjects((prev) => [project, ...prev]);
       setShowCreateDialog(false);
       setFormData({ name: "", description: "" });
+      refreshProjects();
     } catch {
       setError("Failed to create project");
     } finally {
@@ -104,6 +107,7 @@ export default function ProjectsPage() {
     try {
       await deleteProject(deletingProject.id);
       setProjects((prev) => prev.filter((p) => p.id !== deletingProject.id));
+      refreshProjects();
     } catch {
       setError("Failed to delete project");
     } finally {
@@ -115,6 +119,7 @@ export default function ProjectsPage() {
     try {
       await deleteAllProjects();
       setProjects([]);
+      refreshProjects();
     } catch {
       setError("Failed to delete all projects");
     } finally {

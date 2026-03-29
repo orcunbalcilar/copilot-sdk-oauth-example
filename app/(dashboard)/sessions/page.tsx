@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { formatRelativeTime } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/time-utils";
 
 interface SessionInfo {
   id: string;

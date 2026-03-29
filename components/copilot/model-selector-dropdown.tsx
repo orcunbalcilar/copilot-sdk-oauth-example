@@ -40,7 +40,7 @@ export function ModelSelectorDropdown(props: {
       >
         <TriggerContent currentModelName={ctx.currentModelName} enableReasoning={settings.enableReasoning} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
+      <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
         <ProviderSection providers={providers} selected={settings.providerId} onChange={ctx.handleProviderChange} />
         <ModelSection models={ctx.models} selected={settings.modelId} onChange={ctx.handleModelChange} />
         <DropdownMenuSeparator />

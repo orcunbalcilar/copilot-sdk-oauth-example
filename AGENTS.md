@@ -1,12 +1,14 @@
 # Must Read Rules for Agents
 
-<!-- BEGIN:nextjs-agent-rules -->
+<!-- BEGIN:coding-rules -->
 
-## Next.js: ALWAYS read docs before coding
+## Coding: ALWAYS read relevant docs and code before coding
 
-Before any Next.js work, find and read the relevant doc in `node_modules/next/dist/docs/`. Your training data is outdated — the docs are the source of truth.
+Your training data is outdated, you must always read the relevant documentation and code before making any code changes. Ensure that your changes are in line with the library/framework's best practices.
 
-<!-- END:nextjs-agent-rules -->
+Code review is an important part of the development process. When you consider your work must be reviewed, use claude-opus-4.6 subagent(s) for review. Subagents MUST also follow all rules in this file — pass them the relevant rules explicitly.
+
+<!-- END:coding-rules -->
 
 <!-- BEGIN:copilot-sdk-agent-rules -->
 
@@ -16,36 +18,58 @@ Before any Copilot SDK work, find and read the relevant doc from the url `https:
 
 <!-- END:copilot-sdk-agent-rules -->
 
+<!-- BEGIN:nextjs-agent-rules -->
+
+## Next.js: ALWAYS read docs before coding
+
+Before any Next.js work, find and read the relevant doc in `node_modules/next/dist/docs/`. Your training data is outdated — the docs are the source of truth.
+
+<!-- END:nextjs-agent-rules -->
+
 <!-- BEGIN:ui-testing-agent-rules -->
 
-## UI Testing: MUST be done for changes that affect the UI
+## UI Testing: MUST run for ANY change that affects the UI
 
-Don't expect the prompt to ask you to do UI testing for your changes. If your change affects the UI, follow these steps:
+This is NOT optional. Do NOT skip this. Do NOT defer this to the user.
 
-1. Use chrome devtools to run the regression tests by using the open browser (Prequisite: user has to activate the open browser for remote debugging in the settings, if not activated, ask him to do it)
-2. Verify the change works as expected and doesn't break anything else in the UI
-3. If you find any issues, fix them before submitting the change
-4. If everything looks good, create a playwright test that does your manual testing steps
+If your change affects the UI (components, pages, styles, animations, layout), you MUST:
+
+1. Read the `agent-browser` skill file FIRST
+2. Connect to the running browser: `agent-browser --auto-connect snapshot -i`
+3. Navigate to EVERY page you changed and visually verify each change
+4. If you find ANY issues, fix them BEFORE moving on
+5. Screenshot each verified page as evidence
+
+Prerequisite: The user must have remote debugging enabled in their browser. If `agent-browser --auto-connect` fails, ask the user to enable it.
+
+If authentication is required to test dashboard pages and browser automation cannot authenticate, ask the user to sign in via the browser WITHOUT interrupting the current turn. Continue with other work while waiting, and re-check after the user confirms sign-in.
+
+Do NOT say "build passes" or "looks correct" without actually opening the browser and checking.
 
 <!-- END:ui-testing-agent-rules -->
 
 <!-- BEGIN:skills-agent-rules -->
 
-## Skills: ALWAYS read the relevant skills for your task
+## Skills: MUST read the relevant skills BEFORE starting work
 
-Don't expect the prompt to ask you to read the relevant skills. You have the skills. Always read the relevant skills for your task.
+This is NOT optional. Do NOT skip this. Skills contain critical domain knowledge.
 
-For example:
+Before starting ANY task, identify and read the relevant skill files from `~/.agents/skills/`. Examples:
 
-- React components: read the vercel react best practices, frontend-design, web-design-guidelines
+- React/UI components → read `vercel-react-best-practices`, `frontend-design`, `web-design-guidelines`
+- Browser testing → read `agent-browser`
+- Library docs → read `context7`
+- shadcn components → read `shadcn`
 
-<!-- BEGIN:skills-agent-rules -->
+Subagents MUST also read the relevant skills. Pass skill file paths to subagents explicitly.
+
+<!-- END:skills-agent-rules -->
 
 <!-- BEGIN:up-to-date-code-agent-rules -->
 
 ## Up-to-date Code Docs For Any Prompt
 
-Don't expect the prompt to ask you to read the relevant code docs. Always read the relevant code docs for your task. The code is the source of truth, not your training data. Use the **CONTEXT7** tools/skill to find the relevant code docs for your task and read them carefully.
+Do NOT rely on training data for library APIs. Use the `context7` skill to fetch current docs
 
 ## Code References For Any Prompt
 
@@ -58,6 +82,7 @@ Source code is the single source of truth for how the system works. Always find 
 - Always use official docs and source codes of any library/framework to understand their behavior. Use **CONTEXT7** tools/skill.
 - Any file bigger than 250 lines of code is a code smell. Refactor it into smaller files. This applies to both source and test files.
 - Always work by using the unlimited Claude Opus 4.6 subagents.
-- Always be responsible for the project and its code quality, use codacy cli analysis. "None of these are caused by my changes."/"not related to my changes" are not acceptable answers. If you see any issues, fix them.
+- You are responsible for the ENTIRE project, not just your changes. "Not related to my changes" is NOT acceptable. If you see issues, fix them.
+- Always run `codacy cli analysis` after edits. If issues are found, fix them.
 
 <!-- END:project-rules -->

@@ -1,6 +1,5 @@
-"use client";
+"use client"
 
-import { motion } from "motion/react";
 import {
   BarChart3,
   Bot,
@@ -8,34 +7,45 @@ import {
   MessageSquare,
   ShieldCheck,
   Zap,
-} from "lucide-react";
+} from "lucide-react"
+import { motion } from "motion/react"
+
+const fadeUp = (delay: number) => ({
+  initial: { y: 30, opacity: 0 },
+  whileInView: { y: 0, opacity: 1 },
+  viewport: { once: true, margin: "-60px" } as const,
+  transition: { delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] as const },
+})
 
 interface FeatureCardProps {
-  readonly icon: React.ComponentType<{ className?: string }>;
-  readonly title: string;
-  readonly description: string;
+  readonly icon: React.ComponentType<{ className?: string }>
+  readonly title: string
+  readonly description: string
+  readonly index: number
 }
 
-function FeatureCard({ icon: Icon, title, description }: FeatureCardProps) {
+function FeatureCard({ icon: Icon, title, description, index }: FeatureCardProps) {
   return (
     <motion.div
       className="group rounded-xl border border-border/50 bg-card/30 p-6 transition-colors hover:border-primary/30 hover:bg-card/60"
-      initial={{ y: 20, opacity: 0 }}
-      whileInView={{ y: 0, opacity: 1 }}
-      viewport={{ once: true }}
+      {...fadeUp(0.1 + index * 0.1)}
     >
-      <div className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
+      <motion.div
+        className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20"
+        whileHover={{ scale: 1.1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      >
         <Icon className="size-6 text-primary" />
-      </div>
+      </motion.div>
       <h3 className="mb-2 text-lg font-semibold">{title}</h3>
       <p className="text-sm leading-relaxed text-muted-foreground">
         {description}
       </p>
     </motion.div>
-  );
+  )
 }
 
-const features: FeatureCardProps[] = [
+const features: Omit<FeatureCardProps, "index">[] = [
   {
     icon: Bot,
     title: "Multi-Agent Intelligence",
@@ -72,17 +82,15 @@ const features: FeatureCardProps[] = [
     description:
       "Watch agent execution in real-time. Track tool calls, reasoning traces, and token usage as your tests are generated.",
   },
-];
+]
 
 export function FeaturesSection() {
   return (
     <section className="relative border-y border-border/50 py-24">
-      <div className="container relative mx-auto px-4">
+      <div className="relative container mx-auto px-4">
         <motion.div
           className="mb-16 text-center"
-          initial={{ y: 20, opacity: 0 }}
-          whileInView={{ y: 0, opacity: 1 }}
-          viewport={{ once: true }}
+          {...fadeUp(0)}
         >
           <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
             Everything You Need for API Testing
@@ -93,11 +101,11 @@ export function FeaturesSection() {
           </p>
         </motion.div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => (
-            <FeatureCard key={feature.title} {...feature} />
+          {features.map((feature, index) => (
+            <FeatureCard key={feature.title} {...feature} index={index} />
           ))}
         </div>
       </div>
     </section>
-  );
+  )
 }

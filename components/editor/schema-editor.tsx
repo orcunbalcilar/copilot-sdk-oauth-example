@@ -42,18 +42,19 @@ export interface SchemaEditorProps {
   className?: string
 }
 
-export function SchemaEditor({
-  value,
-  onChange,
-  readOnly = false,
-  height: heightProp,
-  language,
-  resizable = true,
-  showMinimap = false,
-  onValidationChange,
-  onLanguageChange,
-  className,
-}: Readonly<SchemaEditorProps>) {
+export function SchemaEditor(props: Readonly<SchemaEditorProps>) {
+  const {
+    value,
+    onChange,
+    readOnly = false,
+    height: heightProp,
+    language,
+    resizable = true,
+    showMinimap = false,
+    onValidationChange,
+    onLanguageChange,
+    className,
+  } = props
   const {
     errors,
     detectedLanguage,

@@ -11,7 +11,7 @@ import type * as Monaco from "monaco-editor"
 import { cn } from "@/lib/utils"
 import type { EditorLanguage } from "./language-detection"
 import { detectLanguage } from "./language-detection"
-import { applyCurrentThemeSafe } from "./editor-themes"
+import { defineRestflowThemes, applyCurrentThemeSafe } from "./editor-themes"
 
 const MonacoDiffEditor = dynamic(
   () =>
@@ -66,6 +66,7 @@ export function SchemaDiffEditor({
 
   const handleBeforeMount = useCallback((monaco: typeof Monaco) => {
     monacoRef.current = monaco
+    defineRestflowThemes(monaco)
     applyCurrentThemeSafe(monaco)
   }, [])
 

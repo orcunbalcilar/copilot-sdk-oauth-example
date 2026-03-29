@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState, useCallback } from "react";
+import { motion } from "motion/react";
 import {
   Card,
   CardContent,
@@ -37,8 +38,8 @@ import {
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { useProject } from "@/lib/project-context";
 import {
-  getOrCreateDefaultProject,
   getProjectScenarios,
   deleteScenario,
   runScenario,
@@ -57,6 +58,7 @@ const STATUS_MAP: Record<
 };
 
 export default function TestCasesPage() {
+  const { selectedProject } = useProject();
   const [scenarios, setScenarios] = useState<StoredScenario[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,11 +70,15 @@ export default function TestCasesPage() {
     useState<ExecutionResult | null>(null);
 
   const fetchScenarios = useCallback(async () => {
+    if (!selectedProject) {
+      setLoading(false);
+      setScenarios([]);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
-      const project = await getOrCreateDefaultProject();
-      const { content } = await getProjectScenarios(project.id);
+      const { content } = await getProjectScenarios(selectedProject.id);
       setScenarios(content);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to load";
@@ -80,7 +86,7 @@ export default function TestCasesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedProject]);
 
   useEffect(() => {
     fetchScenarios();
@@ -166,11 +172,21 @@ export default function TestCasesPage() {
       )}
 
       <div className="grid gap-3">
-        {filtered.map((scenario) => {
+        {filtered.map((scenario, index) => {
           const status =
             STATUS_MAP[scenario.status] ?? STATUS_MAP.CREATED;
           return (
-            <Card key={scenario.id}>
+            <motion.div
+              key={scenario.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.25,
+                delay: index * 0.1,
+                ease: "easeOut",
+              }}
+            >
+              <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div>
                   <CardTitle className="text-sm font-medium">
@@ -211,6 +227,7 @@ export default function TestCasesPage() {
                 </Button>
               </CardContent>
             </Card>
+            </motion.div>
           );
         })}
       </div>

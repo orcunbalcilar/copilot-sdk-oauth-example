@@ -94,24 +94,24 @@ function PerUserTab() {
   const { data: session } = useSession();
   const [userStats, setUserStats] = useState<UserAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const email = session?.user?.email;
 
   useEffect(() => {
-    async function fetch() {
-      if (!session?.user?.email) {
+    async function fetchUserStats() {
+      if (!email) {
         setLoading(false);
         return;
       }
       try {
-        const stats = await getUserAnalytics(session.user.email);
-        setUserStats(stats);
+        setUserStats(await getUserAnalytics(email));
       } catch {
         setUserStats(null);
       } finally {
         setLoading(false);
       }
     }
-    fetch();
-  }, [session?.user?.email]);
+    fetchUserStats();
+  }, [email]);
 
   if (loading) {
     return (

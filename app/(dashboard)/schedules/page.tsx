@@ -9,15 +9,16 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Calendar, CheckCircle2, Clock, Edit, History, Loader2, Play, Plus, RefreshCw, Trash2, XCircle } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { formatRelativeTime } from "@/lib/utils";
-import { getSchedules, createSchedule, updateSchedule, deleteSchedule, triggerSchedule, getScheduleRuns, getOrCreateDefaultProject, getProjectScenarios, type ScheduledExecution, type ScheduledExecutionRun, type CreateScheduleRequest, type StoredScenario, type Project } from "@/lib/services";
+import { formatRelativeTime } from "@/lib/time-utils";
+import { getSchedules, createSchedule, updateSchedule, deleteSchedule, triggerSchedule, getScheduleRuns, getProjectScenarios, type ScheduledExecution, type ScheduledExecutionRun, type CreateScheduleRequest, type StoredScenario } from "@/lib/services";
+import { useProject } from "@/lib/project-context";
 import { ScheduleFormDialog } from "./schedule-form-dialog";
 import { RunHistoryDialog } from "./run-history-dialog";
 
 type ScheduleAction = { type: "delete"; id: string } | { type: "toggle"; id: string; enabled: boolean };
 
 export default function SchedulesPage() {
-  const [project, setProject] = useState<Project | null>(null);
+  const { selectedProject } = useProject();
   const [schedules, setSchedules] = useState<ScheduledExecution[]>([]);
   const [scenarios, setScenarios] = useState<StoredScenario[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,14 +44,18 @@ export default function SchedulesPage() {
   const [triggeringId, setTriggeringId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!selectedProject) {
+      setLoading(false);
+      setSchedules([]);
+      setScenarios([]);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
-      const proj = await getOrCreateDefaultProject();
-      setProject(proj);
       const [schedulesData, scenariosData] = await Promise.all([
-        getSchedules(proj.id),
-        getProjectScenarios(proj.id),
+        getSchedules(selectedProject.id),
+        getProjectScenarios(selectedProject.id),
       ]);
       setSchedules(schedulesData);
       setScenarios(scenariosData?.content ?? []);
@@ -59,57 +64,57 @@ export default function SchedulesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedProject]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleToggle = async (schedule: ScheduledExecution) => {
-    if (!project) return;
+    if (!selectedProject) return;
     const newEnabled = !schedule.enabled;
     startTransition(() => {
       updateOptimistic({ type: "toggle", id: schedule.id, enabled: newEnabled });
     });
     try {
-      const updated = await updateSchedule(project.id, schedule.id, { enabled: newEnabled });
+      const updated = await updateSchedule(selectedProject.id, schedule.id, { enabled: newEnabled });
       setSchedules((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
     } catch { fetchData(); }
   };
 
   const handleTrigger = async (schedule: ScheduledExecution) => {
-    if (!project) return;
+    if (!selectedProject) return;
     setTriggeringId(schedule.id);
-    try { await triggerSchedule(project.id, schedule.id); } catch { /* */ }
+    try { await triggerSchedule(selectedProject.id, schedule.id); } catch { /* */ }
     finally { setTriggeringId(null); }
   };
 
   const handleDelete = async () => {
-    if (!project || !deletingSchedule) return;
+    if (!selectedProject || !deletingSchedule) return;
     const id = deletingSchedule.id;
     startTransition(() => { updateOptimistic({ type: "delete", id }); });
     setDeletingSchedule(null);
     try {
-      await deleteSchedule(project.id, id);
+      await deleteSchedule(selectedProject.id, id);
       setSchedules((prev) => prev.filter((s) => s.id !== id));
     } catch { fetchData(); }
   };
 
   const handleViewRuns = async (schedule: ScheduledExecution) => {
-    if (!project) return;
+    if (!selectedProject) return;
     setRunsSchedule(schedule);
     setRunsLoading(true);
     try {
-      setRuns(await getScheduleRuns(project.id, schedule.id));
+      setRuns(await getScheduleRuns(selectedProject.id, schedule.id));
     } catch { setRuns([]); }
     finally { setRunsLoading(false); }
   };
 
   const handleCreateOrUpdate = async (data: CreateScheduleRequest) => {
-    if (!project) return;
+    if (!selectedProject) return;
     if (editingSchedule) {
-      const updated = await updateSchedule(project.id, editingSchedule.id, data);
+      const updated = await updateSchedule(selectedProject.id, editingSchedule.id, data);
       setSchedules((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
     } else {
-      const created = await createSchedule(project.id, data);
+      const created = await createSchedule(selectedProject.id, data);
       setSchedules((prev) => [...prev, created]);
     }
     setShowCreateDialog(false);
