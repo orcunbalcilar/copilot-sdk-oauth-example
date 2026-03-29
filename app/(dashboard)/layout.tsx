@@ -3,6 +3,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { ProjectProvider } from "@/lib/project-context"
 import { redirect } from "next/navigation"
 import { AppSidebar } from "./app-sidebar"
+import { SessionProvider } from "next-auth/react"
 
 export default async function DashboardLayout({
   children,
@@ -15,15 +16,17 @@ export default async function DashboardLayout({
   }
 
   return (
-    <SidebarProvider>
-      <ProjectProvider>
-        <div className="flex h-screen w-full">
-          <AppSidebar user={session.user} />
-          <SidebarInset className="flex-1 overflow-hidden">
-            {children}
-          </SidebarInset>
-        </div>
-      </ProjectProvider>
-    </SidebarProvider>
+    <SessionProvider session={session}>
+      <SidebarProvider>
+        <ProjectProvider>
+          <div className="flex h-screen w-full">
+            <AppSidebar user={session.user} />
+            <SidebarInset className="flex-1 overflow-hidden">
+              {children}
+            </SidebarInset>
+          </div>
+        </ProjectProvider>
+      </SidebarProvider>
+    </SessionProvider>
   )
 }

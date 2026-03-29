@@ -3,7 +3,7 @@ import Link from "next/link"
 
 export function Footer() {
   return (
-    <footer className="border-t py-8">
+    <footer className="border-t border-border/50 py-8 universe:border-white/10">
       <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 sm:flex-row">
         <div className="flex items-center gap-2">
           <Sparkles className="size-5 text-primary" />

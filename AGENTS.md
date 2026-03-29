@@ -34,13 +34,13 @@ This is NOT optional. Do NOT skip this. Do NOT defer this to the user.
 
 If your change affects the UI (components, pages, styles, animations, layout), you MUST:
 
-1. Read the `agent-browser` skill file FIRST
-2. Connect to the running browser: `agent-browser --auto-connect snapshot -i`
+1. Read the `browser-use` skill file FIRST
+2. Connect to the running browser: `browser-use --connect snapshot -i`
 3. Navigate to EVERY page you changed and visually verify each change
 4. If you find ANY issues, fix them BEFORE moving on
 5. Screenshot each verified page as evidence
 
-Prerequisite: The user must have remote debugging enabled in their browser. If `agent-browser --auto-connect` fails, ask the user to enable it.
+Prerequisite: The user must have remote debugging enabled in their browser. If `browser-use --connect` fails, ask the user to enable it.
 
 If authentication is required to test dashboard pages and browser automation cannot authenticate, ask the user to sign in via the browser WITHOUT interrupting the current turn. Continue with other work while waiting, and re-check after the user confirms sign-in.
 
@@ -57,7 +57,7 @@ This is NOT optional. Do NOT skip this. Skills contain critical domain knowledge
 Before starting ANY task, identify and read the relevant skill files from `~/.agents/skills/`. Examples:
 
 - React/UI components → read `vercel-react-best-practices`, `frontend-design`, `web-design-guidelines`
-- Browser testing → read `agent-browser`
+- Browser testing → read `browser-use`
 - Library docs → read `context7`
 - shadcn components → read `shadcn`
 

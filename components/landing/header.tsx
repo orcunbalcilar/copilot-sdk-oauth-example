@@ -2,16 +2,13 @@
 
 import { motion } from "motion/react";
 import Link from "next/link";
-import { Toggle } from "@/components/ui/toggle";
-import { useTheme } from "next-themes";
-import { Moon, Sun, Sparkles } from "lucide-react";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { Sparkles } from "lucide-react";
 
 export function Header() {
-  const { theme, setTheme } = useTheme();
-
   return (
     <motion.header
-      className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/60 backdrop-blur-xl"
+      className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/60 backdrop-blur-xl universe:border-white/10 universe:bg-black/30"
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -32,17 +29,7 @@ export function Header() {
           >
             GitHub
           </Link>
-          <Toggle
-            variant="outline"
-            size="sm"
-            className="size-9"
-            pressed={theme === "dark"}
-            onPressedChange={(pressed) => setTheme(pressed ? "dark" : "light")}
-            aria-label="Toggle dark mode"
-          >
-            <Moon className="hidden dark:block h-4 w-4" />
-            <Sun className="dark:hidden h-4 w-4" />
-          </Toggle>
+          <ThemeToggle className="size-9" />
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/chat"

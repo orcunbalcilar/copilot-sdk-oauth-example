@@ -1,16 +1,15 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Toggle } from "@/components/ui/toggle";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Moon, Settings, Sun } from "lucide-react";
+import { Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTheme } from "next-themes";
 import { SignOutButton } from "./sign-out-button";
 
 function getInitials(name?: string | null): string {
@@ -33,7 +32,6 @@ export function SidebarFooterContent(props: {
   };
 }) {
   const pathname = usePathname();
-  const { theme, setTheme } = useTheme();
 
   return (
     <SidebarMenu>
@@ -68,19 +66,7 @@ export function SidebarFooterContent(props: {
             <Settings className="h-4 w-4" />
             <span>Settings</span>
           </SidebarMenuButton>
-          <Toggle
-            variant="outline"
-            size="sm"
-            className="w-8 h-8 px-0"
-            pressed={theme === "dark"}
-            onPressedChange={(pressed) =>
-              setTheme(pressed ? "dark" : "light")
-            }
-            aria-label="Toggle dark mode"
-          >
-            <Moon className="hidden dark:block h-4 w-4" />
-            <Sun className="dark:hidden h-4 w-4" />
-          </Toggle>
+          <ThemeToggle className="w-8 h-8 px-0" />
         </div>
       </SidebarMenuItem>
       <SidebarMenuItem>

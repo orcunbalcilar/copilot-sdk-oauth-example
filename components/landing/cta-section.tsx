@@ -9,12 +9,12 @@ export function CTASection() {
     <section className="py-24">
       <div className="container mx-auto px-4">
         <motion.div
-          className="relative mx-auto max-w-2xl overflow-hidden rounded-2xl border border-primary/20 p-8 text-center sm:p-12"
+          className="relative mx-auto max-w-2xl overflow-hidden rounded-2xl border border-primary/20 p-8 text-center sm:p-12 universe:border-purple-400/20"
           initial={{ y: 20, opacity: 0 }}
           whileInView={{ y: 0, opacity: 1 }}
           viewport={{ once: true }}
         >
-          <div className="absolute inset-0 bg-card/30 backdrop-blur-xl" />
+          <div className="absolute inset-0 bg-card/30 backdrop-blur-xl universe:bg-black/40" />
           <div className="relative">
             <motion.div
               animate={{ rotate: [0, 5, -5, 0] }}

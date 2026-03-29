@@ -25,7 +25,7 @@ function TechBadge({ children }: { readonly children: React.ReactNode }) {
 
 export function PoweredBySection() {
   return (
-    <section className="border-t border-border/50 py-24">
+    <section className="border-t border-border/50 py-24 universe:border-white/10">
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-4xl text-center">
           <motion.div {...fadeUp(0)}>

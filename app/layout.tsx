@@ -2,8 +2,9 @@ import { Geist, Geist_Mono } from "next/font/google"
 import type { Metadata } from "next"
 
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "@/components/theme/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { UniverseBackground } from "@/components/theme/universe/universe-bg"
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -34,6 +35,7 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
+          <UniverseBackground />
           <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
       </body>

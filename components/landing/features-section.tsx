@@ -27,7 +27,7 @@ interface FeatureCardProps {
 function FeatureCard({ icon: Icon, title, description, index }: FeatureCardProps) {
   return (
     <motion.div
-      className="group rounded-xl border border-border/50 bg-card/30 p-6 transition-colors hover:border-primary/30 hover:bg-card/60"
+      className="group rounded-xl border border-border/50 bg-card/30 p-6 transition-colors hover:border-primary/30 hover:bg-card/60 universe:border-white/10 universe:bg-white/5 universe:backdrop-blur-sm universe:hover:border-purple-400/30 universe:hover:bg-white/10"
       {...fadeUp(0.1 + index * 0.1)}
     >
       <motion.div
@@ -86,7 +86,7 @@ const features: Omit<FeatureCardProps, "index">[] = [
 
 export function FeaturesSection() {
   return (
-    <section className="relative border-y border-border/50 py-24">
+    <section className="relative border-y border-border/50 py-24 universe:border-white/10">
       <div className="relative container mx-auto px-4">
         <motion.div
           className="mb-16 text-center"
