@@ -35,6 +35,7 @@ import { DEFAULT_MODEL_SETTINGS } from "@/lib/chat-settings"
 import { CopyIcon, RefreshCcwIcon, RotateCcw } from "lucide-react"
 import type { ReactNode } from "react"
 import { Fragment, useState } from "react"
+import { GlobeAnimation } from "./globe-animation"
 import { ModelSelector } from "./model-selector"
 import { SkillSelector } from "./skill-selector"
 
@@ -117,6 +118,9 @@ export function CopilotChat(props: CopilotChatProps) {
         <ConversationContent className="mx-auto w-full max-w-3xl space-y-4 px-4 py-6">
           {messages.length === 0 ? (
             <>
+              <div className="relative mx-auto h-48 w-48">
+                <GlobeAnimation inputText={input} />
+              </div>
               <ConversationEmptyState
                 icon={icon}
                 title={`Ready to ${title.toLowerCase()}`}
