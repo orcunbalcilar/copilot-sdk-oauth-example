@@ -55,7 +55,7 @@ export function getClient(githubToken?: string): CopilotClient {
           telemetry,
           githubToken,
           useLoggedInUser: false,
-        }),
+        })
       )
     }
     return userClients.get(key)!
