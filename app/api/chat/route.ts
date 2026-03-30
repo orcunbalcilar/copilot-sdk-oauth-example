@@ -148,8 +148,11 @@ export async function GET() {
   }
 
   try {
-    const modelInfos = await client.listModels()
-    const byokIds = new Set(getByokModels().map((m) => m.id))
+    await client.start()
+    const authModels = await client.listModels()
+    const byokModels = getByokModels()
+    const modelInfos = [...authModels, ...byokModels]
+    const byokIds = new Set(byokModels.map((m) => m.id))
 
     const copilotModels: Record<string, string> = {}
     const vercelModels: Record<string, string> = {}

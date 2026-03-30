@@ -37,23 +37,6 @@ export function getByokModels(): ModelInfo[] {
   ]
 }
 
-/** All models for onListModels (Copilot defaults + BYOK). */
-function buildAllModels(): ModelInfo[] {
-  const defaultId =
-    process.env.LLM_MODEL_ID || "gpt-5-mini"
-  const copilotDefaults: ModelInfo[] = [
-    {
-      id: defaultId,
-      name: defaultId,
-      capabilities: {
-        supports: { vision: false, reasoningEffort: true },
-        limits: { max_context_window_tokens: 128000 },
-      },
-    },
-  ]
-  return [...copilotDefaults, ...getByokModels()]
-}
-
 export function getClient(githubToken?: string): CopilotClient {
   const logLevel =
     process.env.NODE_ENV === "development"
@@ -61,8 +44,6 @@ export function getClient(githubToken?: string): CopilotClient {
       : ("warning" as const)
 
   const telemetry = { otlpEndpoint: "http://localhost:4318" }
-  const allModels = buildAllModels()
-  const onListModels = () => allModels
 
   if (githubToken) {
     const key = tokenKey(githubToken)
@@ -74,14 +55,13 @@ export function getClient(githubToken?: string): CopilotClient {
           telemetry,
           githubToken,
           useLoggedInUser: false,
-          onListModels,
         }),
       )
     }
     return userClients.get(key)!
   }
 
-  defaultClient ??= new SDK({ logLevel, telemetry, onListModels })
+  defaultClient ??= new SDK({ logLevel, telemetry })
   globalForClients.__copilotDefaultClient = defaultClient
   return defaultClient
 }
